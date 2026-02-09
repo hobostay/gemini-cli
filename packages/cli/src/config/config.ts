@@ -38,6 +38,7 @@ import {
   Config,
   applyAdminAllowlist,
   getAdminBlockedMcpServersMessage,
+  Storage,
 } from '@google/gemini-cli-core';
 import type {
   HookDefinition,
@@ -656,9 +657,15 @@ export async function loadCliConfig(
     },
   };
 
+  let projectPoliciesDir: string | undefined;
+  if (trustedFolder) {
+    projectPoliciesDir = new Storage(cwd).getProjectPoliciesDir();
+  }
+
   const policyEngineConfig = await createPolicyEngineConfig(
     effectiveSettings,
     approvalMode,
+    projectPoliciesDir,
   );
   policyEngineConfig.nonInteractive = !interactive;
 
