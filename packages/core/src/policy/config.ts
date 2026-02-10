@@ -37,8 +37,8 @@ export const DEFAULT_CORE_POLICIES_DIR = path.join(__dirname, 'policies');
 
 // Policy tier constants for priority calculation
 export const DEFAULT_POLICY_TIER = 1;
-export const USER_POLICY_TIER = 2;
-export const PROJECT_POLICY_TIER = 3;
+export const PROJECT_POLICY_TIER = 2;
+export const USER_POLICY_TIER = 3;
 export const ADMIN_POLICY_TIER = 4;
 
 /**
@@ -197,20 +197,20 @@ export async function createPolicyEngineConfig(
   //
   // Priority bands (tiers):
   // - Default policies (TOML): 1 + priority/1000 (e.g., priority 100 → 1.100)
-  // - User policies (TOML): 2 + priority/1000 (e.g., priority 100 → 2.100)
-  // - Project policies (TOML): 3 + priority/1000 (e.g., priority 100 → 3.100)
+  // - Project policies (TOML): 2 + priority/1000 (e.g., priority 100 → 2.100)
+  // - User policies (TOML): 3 + priority/1000 (e.g., priority 100 → 3.100)
   // - Admin policies (TOML): 4 + priority/1000 (e.g., priority 100 → 4.100)
   //
-  // This ensures Admin > Project > User > Default hierarchy is always preserved,
+  // This ensures Admin > User > Project > Default hierarchy is always preserved,
   // while allowing user-specified priorities to work within each tier.
   //
-  // Settings-based and dynamic rules (all in user tier 2.x):
-  //   2.95: Tools that the user has selected as "Always Allow" in the interactive UI
-  //   2.9:  MCP servers excluded list (security: persistent server blocks)
-  //   2.4:  Command line flag --exclude-tools (explicit temporary blocks)
-  //   2.3:  Command line flag --allowed-tools (explicit temporary allows)
-  //   2.2:  MCP servers with trust=true (persistent trusted servers)
-  //   2.1:  MCP servers allowed list (persistent general server allows)
+  // Settings-based and dynamic rules (all in user tier 3.x):
+  //   3.95: Tools that the user has selected as "Always Allow" in the interactive UI
+  //   3.9:  MCP servers excluded list (security: persistent server blocks)
+  //   3.4:  Command line flag --exclude-tools (explicit temporary blocks)
+  //   3.3:  Command line flag --allowed-tools (explicit temporary allows)
+  //   3.2:  MCP servers with trust=true (persistent trusted servers)
+  //   3.1:  MCP servers allowed list (persistent general server allows)
   //
   // TOML policy priorities (before transformation):
   //   10: Write tools default to ASK_USER (becomes 1.010 in default tier)
@@ -221,33 +221,33 @@ export async function createPolicyEngineConfig(
   //   999: YOLO mode allow-all (becomes 1.999 in default tier)
 
   // MCP servers that are explicitly excluded in settings.mcp.excluded
-  // Priority: 2.9 (highest in user tier for security - persistent server blocks)
+  // Priority: 3.9 (highest in user tier for security - persistent server blocks)
   if (settings.mcp?.excluded) {
     for (const serverName of settings.mcp.excluded) {
       rules.push({
         toolName: `${serverName}__*`,
         decision: PolicyDecision.DENY,
-        priority: 2.9,
+        priority: 3.9,
         source: 'Settings (MCP Excluded)',
       });
     }
   }
 
   // Tools that are explicitly excluded in the settings.
-  // Priority: 2.4 (user tier - explicit temporary blocks)
+  // Priority: 3.4 (user tier - explicit temporary blocks)
   if (settings.tools?.exclude) {
     for (const tool of settings.tools.exclude) {
       rules.push({
         toolName: tool,
         decision: PolicyDecision.DENY,
-        priority: 2.4,
+        priority: 3.4,
         source: 'Settings (Tools Excluded)',
       });
     }
   }
 
   // Tools that are explicitly allowed in the settings.
-  // Priority: 2.3 (user tier - explicit temporary allows)
+  // Priority: 3.3 (user tier - explicit temporary allows)
   if (settings.tools?.allowed) {
     for (const tool of settings.tools.allowed) {
       // Check for legacy format: toolName(args)
@@ -267,7 +267,7 @@ export async function createPolicyEngineConfig(
               rules.push({
                 toolName,
                 decision: PolicyDecision.ALLOW,
-                priority: 2.3,
+                priority: 3.3,
                 argsPattern: new RegExp(pattern),
                 source: 'Settings (Tools Allowed)',
               });
@@ -279,7 +279,7 @@ export async function createPolicyEngineConfig(
           rules.push({
             toolName,
             decision: PolicyDecision.ALLOW,
-            priority: 2.3,
+            priority: 3.3,
             source: 'Settings (Tools Allowed)',
           });
         }
@@ -291,7 +291,7 @@ export async function createPolicyEngineConfig(
         rules.push({
           toolName,
           decision: PolicyDecision.ALLOW,
-          priority: 2.3,
+          priority: 3.3,
           source: 'Settings (Tools Allowed)',
         });
       }
@@ -299,7 +299,7 @@ export async function createPolicyEngineConfig(
   }
 
   // MCP servers that are trusted in the settings.
-  // Priority: 2.2 (user tier - persistent trusted servers)
+  // Priority: 3.2 (user tier - persistent trusted servers)
   if (settings.mcpServers) {
     for (const [serverName, serverConfig] of Object.entries(
       settings.mcpServers,
@@ -310,7 +310,7 @@ export async function createPolicyEngineConfig(
         rules.push({
           toolName: `${serverName}__*`,
           decision: PolicyDecision.ALLOW,
-          priority: 2.2,
+          priority: 3.2,
           source: 'Settings (MCP Trusted)',
         });
       }
@@ -318,13 +318,13 @@ export async function createPolicyEngineConfig(
   }
 
   // MCP servers that are explicitly allowed in settings.mcp.allowed
-  // Priority: 2.1 (user tier - persistent general server allows)
+  // Priority: 3.1 (user tier - persistent general server allows)
   if (settings.mcp?.allowed) {
     for (const serverName of settings.mcp.allowed) {
       rules.push({
         toolName: `${serverName}__*`,
         decision: PolicyDecision.ALLOW,
-        priority: 2.1,
+        priority: 3.1,
         source: 'Settings (MCP Allowed)',
       });
     }
@@ -366,10 +366,10 @@ export function createPolicyUpdater(
             policyEngine.addRule({
               toolName,
               decision: PolicyDecision.ALLOW,
-              // User tier (2) + high priority (950/1000) = 2.95
+              // User tier (3) + high priority (950/1000) = 3.95
               // This ensures user "always allow" selections are high priority
-              // but still lose to admin policies (3.xxx) and settings excludes (200)
-              priority: 2.95,
+              // but still lose to admin policies (4.xxx) and settings excludes (300)
+              priority: 3.95,
               argsPattern: new RegExp(pattern),
               source: 'Dynamic (Confirmed)',
             });
@@ -383,10 +383,10 @@ export function createPolicyUpdater(
         policyEngine.addRule({
           toolName,
           decision: PolicyDecision.ALLOW,
-          // User tier (2) + high priority (950/1000) = 2.95
+          // User tier (3) + high priority (950/1000) = 3.95
           // This ensures user "always allow" selections are high priority
-          // but still lose to admin policies (3.xxx) and settings excludes (200)
-          priority: 2.95,
+          // but still lose to admin policies (4.xxx) and settings excludes (300)
+          priority: 3.95,
           argsPattern,
           source: 'Dynamic (Confirmed)',
         });
