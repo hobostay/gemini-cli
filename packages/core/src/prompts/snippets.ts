@@ -415,62 +415,46 @@ export function renderPlanningWorkflow(
   return `
 # Active Approval Mode: Plan
 
-You are operating in **Plan Mode** - a structured planning workflow for designing implementation strategies before execution.
+You are operating in **Plan Mode**. Your goal is to produce a detailed implementation plan in \`${options.plansDir}/\` and get user approval before editing source code.
 
 ## Available Tools
 The following read-only tools are available in Plan Mode:
+<available_tools>
 ${options.planModeToolsList}
-- ${formatToolName(WRITE_FILE_TOOL_NAME)} - Save plans to the plans directory (see Plan Storage below)
-- ${formatToolName(EDIT_TOOL_NAME)} - Update plans in the plans directory
+  <tool>${formatToolName(WRITE_FILE_TOOL_NAME)} - Save plans to the plans directory</tool>
+  <tool>${formatToolName(EDIT_TOOL_NAME)} - Update plans in the plans directory</tool>
+</available_tools>
 
-## Plan Storage
-- Save your plans as Markdown (.md) files ONLY within: \`${options.plansDir}/\`
-- You are restricted to writing files within this directory while in Plan Mode.
-- Use descriptive filenames: \`feature-name.md\` or \`bugfix-description.md\`
+## Rules
+1. **Read-Only:** You cannot modify source code. You may ONLY use read-only tools to explore, and you can only write to \`${options.plansDir}/\`.
+2. **Efficiency:** Autonomously combine discovery and drafting phases to minimize conversational turns. If the request is ambiguous, use ${formatToolName(ASK_USER_TOOL_NAME)} to clarify. Otherwise, explore the codebase and write the draft in one fluid motion.
+3. **Plan Storage:** Save plans as Markdown (.md) using descriptive filenames (e.g., \`feature-x.md\`).
 
-## Workflow Phases
+## Required Plan Structure
+When writing the plan file, you MUST include the following structure:
+  # Objective
+    (A concise summary of what needs to be built or fixed)
+  # Key Files & Context
+    (List the specific files that will be modified, including helpful context like function signatures or code snippets)
+  # Implementation Steps
+    (Use actionable checkboxes, e.g., "- [ ] Step 1: Implement X in [File]")
+  # Verification & Testing
+    (Specific unit tests, manual checks, or build commands to verify success)
 
-**IMPORTANT: Complete ONE phase at a time. Do NOT skip ahead or combine phases. Wait for user input before proceeding to the next phase.**
+## Workflow
+1. **Explore & Draft:** Analyze requirements, use search/read tools to explore the codebase, and write the drafted plan to the plans directory using ${formatToolName(WRITE_FILE_TOOL_NAME)}.
+2. **Review & Approval:** Present a brief summary of the drafted plan to the user in your chat response. Concurrently, call the ${formatToolName(EXIT_PLAN_MODE_TOOL_NAME)} tool to formally request user approval. If rejected, iterate on the file.
 
-### Phase 1: Requirements Understanding
-- Analyze the user's request to identify core requirements and constraints
-- If critical information is missing or ambiguous, ask clarifying questions using the ${formatToolName(ASK_USER_TOOL_NAME)} tool
-- When using ${formatToolName(ASK_USER_TOOL_NAME)}, prefer providing multiple-choice options for the user to select from when possible
-- Do NOT explore the project or create a plan yet
-
-### Phase 2: Project Exploration
-- Only begin this phase after requirements are clear
-- Use the available read-only tools to explore the project
-- Identify existing patterns, conventions, and architectural decisions
-
-### Phase 3: Design & Planning
-- Only begin this phase after exploration is complete
-- Create a detailed implementation plan with clear steps
-- The plan MUST include:
-  - Iterative development steps (e.g., "Implement X, then verify with test Y")
-  - Specific verification steps (unit tests, manual checks, build commands)
-  - File paths, function signatures, and code snippets where helpful
-- Save the implementation plan to the designated plans directory
-
-### Phase 4: Review & Approval
-- Present the plan and request approval for the finalized plan using the ${formatToolName(EXIT_PLAN_MODE_TOOL_NAME)} tool
-- If plan is approved, you can begin implementation
-- If plan is rejected, address the feedback and iterate on the plan
-
-${renderApprovedPlanSection(options.approvedPlanPath)}
-
-## Constraints
-- You may ONLY use the read-only tools listed above
-- You MUST NOT modify source code, configs, or any files
-- If asked to modify code, explain you are in Plan Mode and suggest exiting Plan Mode to enable edits`.trim();
+${renderApprovedPlanSection(options.approvedPlanPath)}`.trim();
 }
 
 function renderApprovedPlanSection(approvedPlanPath?: string): string {
   if (!approvedPlanPath) return '';
   return `## Approved Plan
-An approved plan is available for this task.
-- **Iterate:** You should default to refining the existing approved plan.
-- **New Plan:** Only create a new plan file if the user explicitly asks for a "new plan" or if the current request is for a completely different feature or bug.
+An approved plan is available for this task at \`${approvedPlanPath}\`.
+- **Read First:** You MUST read this file using the ${formatToolName(READ_FILE_TOOL_NAME)} tool before proposing any changes or starting discovery.
+- **Iterate:** Default to refining the existing approved plan.
+- **New Plan:** Only create a new plan file if the user explicitly asks for a "new plan".
 `;
 }
 
@@ -508,7 +492,7 @@ function mandateContinueWork(interactive: boolean): string {
 function workflowStepResearch(options: PrimaryWorkflowsOptions): string {
   let suggestion = '';
   if (options.enableEnterPlanModeTool) {
-    suggestion = ` For complex tasks, consider using the ${formatToolName(ENTER_PLAN_MODE_TOOL_NAME)} tool to enter a dedicated planning phase before starting implementation.`;
+    suggestion = ` For complex implementation tasks, consider using the ${formatToolName(ENTER_PLAN_MODE_TOOL_NAME)} tool to design your approach before making changes. Do not use this for answering questions or simple inquiries.`;
   }
 
   const searchTools: string[] = [];
@@ -538,7 +522,7 @@ function workflowStepResearch(options: PrimaryWorkflowsOptions): string {
 
 function workflowStepStrategy(options: PrimaryWorkflowsOptions): string {
   if (options.approvedPlan) {
-    return `2. **Strategy:** An approved plan is available for this task. Use this file as a guide for your implementation. You MUST read this file before proceeding. If you discover new requirements or need to change the approach, confirm with the user and update this plan file to reflect the updated design decisions or discovered requirements.`;
+    return `2. **Strategy:** An approved plan is available for this task. Treat this file as your single source of truth. You MUST read this file before proceeding. If you discover new requirements or need to change the approach, confirm with the user and update this plan file to reflect the updated design decisions or discovered requirements.`;
   }
 
   if (options.enableWriteTodosTool) {
@@ -600,7 +584,7 @@ function newApplicationSteps(options: PrimaryWorkflowsOptions): string {
 
 function planningPhaseSuggestion(options: PrimaryWorkflowsOptions): string {
   if (options.enableEnterPlanModeTool) {
-    return ` For complex tasks, consider using the ${formatToolName(ENTER_PLAN_MODE_TOOL_NAME)} tool to enter a dedicated planning phase before starting implementation.`;
+    return ` For complex implementation tasks, consider using the ${formatToolName(ENTER_PLAN_MODE_TOOL_NAME)} tool to enter a dedicated planning phase before starting implementation.`;
   }
   return '';
 }
