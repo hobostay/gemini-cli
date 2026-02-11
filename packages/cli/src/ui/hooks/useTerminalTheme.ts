@@ -58,6 +58,7 @@ export function useTerminalTheme(
       const hexColor = parseColor(match[1], match[2], match[3]);
       const luminance = getLuminance(hexColor);
       config.setTerminalBackground(hexColor);
+      themeManager.setTerminalBackground(hexColor);
 
       const currentThemeName = settings.merged.ui.theme;
 

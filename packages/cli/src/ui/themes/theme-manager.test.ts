@@ -238,4 +238,46 @@ describe('ThemeManager', () => {
       expect(themeManager.isCustomTheme('SettingsTheme')).toBe(true);
     });
   });
+
+  describe('terminalBackground override', () => {
+    it('should store and retrieve terminal background', () => {
+      themeManager.setTerminalBackground('#123456');
+      expect(themeManager.getTerminalBackground()).toBe('#123456');
+      themeManager.setTerminalBackground(undefined);
+      expect(themeManager.getTerminalBackground()).toBeUndefined();
+    });
+
+    it('should override background.primary in semantic colors when terminal background is set', () => {
+      const color = '#1a1a1a';
+      themeManager.setTerminalBackground(color);
+      const semanticColors = themeManager.getSemanticColors();
+      expect(semanticColors.background.primary).toBe(color);
+    });
+
+    it('should override Background in colors when terminal background is set', () => {
+      const color = '#1a1a1a';
+      themeManager.setTerminalBackground(color);
+      const colors = themeManager.getColors();
+      expect(colors.Background).toBe(color);
+    });
+
+    it('should re-calculate dependent semantic colors when terminal background is set', () => {
+      themeManager.setTerminalBackground('#000000');
+      const semanticColors = themeManager.getSemanticColors();
+
+      // border.default should be interpolated from background (#000000) and Gray
+      // ui.dark should be interpolated from Gray and background (#000000)
+      expect(semanticColors.border.default).toBeDefined();
+      expect(semanticColors.ui.dark).toBeDefined();
+      expect(semanticColors.border.default).not.toBe(
+        DEFAULT_THEME.semanticColors.border.default,
+      );
+    });
+
+    it('should return original semantic colors when terminal background is NOT set', () => {
+      themeManager.setTerminalBackground(undefined);
+      const semanticColors = themeManager.getSemanticColors();
+      expect(semanticColors).toEqual(DEFAULT_THEME.semanticColors);
+    });
+  });
 });

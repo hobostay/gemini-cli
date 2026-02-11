@@ -33,6 +33,7 @@ import { makeFakeConfig, type Config } from '@google/gemini-cli-core';
 import { FakePersistentState } from './persistentStateFake.js';
 import { AppContext, type AppState } from '../ui/contexts/AppContext.js';
 import { createMockSettings } from './settings.js';
+import { themeManager } from '../ui/themes/theme-manager.js';
 
 export const persistentStateMock = new FakePersistentState();
 
@@ -292,6 +293,8 @@ export const renderWithProviders = (
     terminalWidth,
     mainAreaWidth,
   };
+
+  themeManager.setTerminalBackground(baseState.terminalBackgroundColor);
 
   const finalUIActions = { ...mockUIActions, ...uiActions };
 

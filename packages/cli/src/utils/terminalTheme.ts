@@ -54,6 +54,7 @@ export async function setupTerminalAndTheme(
   }
 
   config.setTerminalBackground(terminalBackground);
+  themeManager.setTerminalBackground(terminalBackground);
 
   if (terminalBackground !== undefined) {
     const currentTheme = themeManager.getActiveTheme();

@@ -192,6 +192,8 @@ export const AppContainer = (props: AppContainerProps) => {
   const { config, initializationResult, resumedSessionData } = props;
   const settings = useSettings();
 
+  const [themeKey, setThemeKey] = useState(settings.merged.ui.theme);
+
   const historyManager = useHistory({
     chatRecordingService: config.getGeminiClient()?.getChatRecordingService(),
   });
@@ -459,6 +461,7 @@ export const AppContainer = (props: AppContainerProps) => {
   useEffect(() => {
     const handleSettingsChanged = () => {
       setSettingsNonce((prev) => prev + 1);
+      setThemeKey(settings.merged.ui.theme);
     };
 
     const handleAdminSettingsChanged = () => {
@@ -480,7 +483,7 @@ export const AppContainer = (props: AppContainerProps) => {
       );
       coreEvents.off(CoreEvent.AgentsDiscovered, handleAgentsDiscovered);
     };
-  }, []);
+  }, [settings]);
 
   const { consoleMessages, clearConsoleMessages: clearConsoleMessagesState } =
     useConsoleMessages();
@@ -2218,7 +2221,7 @@ Logging in with Google... Restarting Gemini CLI to continue.
   }
 
   return (
-    <UIStateContext.Provider value={uiState}>
+    <UIStateContext.Provider key={themeKey} value={uiState}>
       <UIActionsContext.Provider value={uiActions}>
         <ConfigContext.Provider value={config}>
           <AppContext.Provider
